@@ -9,7 +9,7 @@ def is_function_reachable(start_ea, target_ea):
         res = []
         for head in idautils.Heads(func.start_ea, func.end_ea):
             for xref in idautils.XrefsFrom(head, 0):
-                if xref.type in [idaapi.fl_CN, idaapi.fl_CF]:
+                if xref.type in [idaapi.fl_CN, idaapi.fl_CF, idaapi.fl_JN, idaapi.fl_JF]:
                     res.append(xref.to)
         return res
 
@@ -27,12 +27,14 @@ def is_function_reachable(start_ea, target_ea):
         f = 0
         for ea in get_function_xrefs(current_func):
             called_func = idaapi.get_func(ea)
-            if called_func and dfs(called_func, path) == 2:
-                print("---TRACE---")
-                print(path[0])
-                for i in path[1:]:
-                    print(' -> '+i)
-                print()
+            ret = dfs(called_func, path)
+            if called_func and ret > 0:
+                if ret == 2:
+                    print("---TRACE---")
+                    print(path[0])
+                    for i in path[1:]:
+                        print(' -> '+i)
+                    print()
                 f = 1
             path.pop()
         if f:
@@ -43,10 +45,10 @@ def is_function_reachable(start_ea, target_ea):
     return dfs(start_func, [])
 
 start_function_name = "apic_mem_write"
-target_function_name = ".g_malloc"  
+target_function_name = "vapic_enable"  
 target_ea = idaapi.get_name_ea(idaapi.BADADDR, target_function_name)
 start_ea = idaapi.get_name_ea(idaapi.BADADDR, start_function_name)
-if is_function_reachable(start_ea, target_ea):
+if is_function_reachable(start_ea, target_ea) != 0:
     print(f'{start_function_name} => {target_function_name} Reachable')
 else:
     print(f'{start_function_name} => {target_function_name} Not Reachable')
